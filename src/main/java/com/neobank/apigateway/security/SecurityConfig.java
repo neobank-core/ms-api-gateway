@@ -26,19 +26,21 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/actuator/health",
-                                "/actuator/info",
-                                "/actuator/prometheus",
-                                "/swagger-ui/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs/**",
-                                "/api-docs/**",
-                                "/api/auth/register",
-                                "/api/auth/login"
-                        ).permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers((jakarta.servlet.http.HttpServletRequest request) -> {
+                            String uri = request.getRequestURI();
+                            return uri.startsWith("/swagger-ui") ||
+                                   uri.startsWith("/webjars") ||
+                                   uri.startsWith("/actuator") ||
+                                   uri.startsWith("/v3/api-docs") ||
+                                   uri.startsWith("/api-docs") ||
+                                   uri.startsWith("/api/auth/register") ||
+                                   uri.startsWith("/api/auth/login") ||
+                                    uri.startsWith("/api/auth/refresh") ||
+                                    uri.startsWith("/error") ||
+                                   uri.contains("/actuator/");
+                        }).permitAll()
+                        .requestMatchers((jakarta.servlet.http.HttpServletRequest request) -> request.getRequestURI().startsWith("/api/internal/")).denyAll()
+                        .requestMatchers((jakarta.servlet.http.HttpServletRequest request) -> request.getRequestURI().startsWith("/api/admin/")).hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -65,10 +67,11 @@ public class SecurityConfig {
         return converter;
     }
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://admin.neobank.local"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Idempotency-Key"));
         configuration.setExposedHeaders(List.of("Authorization"));
